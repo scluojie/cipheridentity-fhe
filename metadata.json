@@ -1,0 +1,4 @@
+{
+  "name": "CipherIdentity FHE",
+  "description": "A privacy-preserving identity management dashboard demonstrating Fully Homomorphic Encryption (FHE) for access control without revealing sensitive user data."
+}
