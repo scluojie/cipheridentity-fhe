@@ -1,83 +1,169 @@
-🛡️ Private Identity DApp
+````markdown
+# 🛡️ Private Identity DApp (Zama FHEVM)
 
-A privacy-preserving identity verification application built on Zama FHEVM. Users can store encrypted attributes (age, credit score, membership tier) on-chain and perform access control checks (e.g., adult verification, VIP status) using homomorphic encryption, without exposing raw data.
+A privacy-preserving on-chain identity verification application built on **Zama FHEVM**.
 
-✨ Features
-🔒 Privacy-first: Age, credit score, and membership tier are stored as encrypted values. No plaintext is revealed on-chain.
+This project implements a fully private identity authentication system on-chain. Users can securely store encrypted age, credit score, and membership tier on the blockchain. With **Fully Homomorphic Encryption (FHE)**, smart contracts perform access control checks directly on ciphertext (e.g., whether the user is an adult, whether the user is VIP) without ever seeing plaintext data. The frontend uses a Relayer to safely decrypt results, ensuring privacy, security, and verifiability throughout the process.
 
-✅ Access Control:
+---
 
-checkIsAdult: Verify if a user is at least 18 years old.
+## ✨ Features
 
-checkIsVIP: Verify if a user qualifies as VIP (credit score > 700 or Gold tier).
+- **End-to-End Privacy**
 
-🧑‍💻 Frontend Interaction:
+  - User attributes (`age`, `creditScore`, `membershipTier`) are stored as homomorphically encrypted ciphertext on-chain.
+  - Smart contracts cannot access plaintext; all logic is executed using `@fhevm/solidity` encrypted types and operations.
 
-Users submit encrypted identity data via the web interface.
+- **Encrypted Access Control (ACL)**
 
-The frontend calls contract functions and uses the Relayer to decrypt results, displaying whether access is granted.
+  - `checkIsAdult`: verifies `age ≥ 18` → returns encrypted boolean `ebool`
+  - `checkIsVIP`: verifies `creditScore > 700` or `membershipTier == 1` → returns encrypted boolean `ebool`
 
-🌐 Deployment Ready: Can run locally or be deployed to platforms like Vercel.
+- **Frontend Interaction (Relayer SDK)**
+  - Integrates `@zama-fhe/relayer-sdk` for encrypted input and decryption requests.
+  - Uses **EIP-712 signatures** to authorize decryption, ensuring only the data owner can view results.
+  - Full logging of encryption submission, contract calls, and decryption results.
 
-🛠️ Tech Stack
-Solidity: Smart contract logic using Zama’s FHE library.
+---
 
-TypeScript + React/Next.js: Frontend UI and interaction.
+## 🏗️ Tech Stack
 
-ethers.js: Blockchain interaction.
+- **Core Protocol**: Zama FHEVM
+- **Smart Contracts**: Solidity ^0.8.25 + Hardhat
+- **Frontend Framework**: React + TypeScript
+- **Blockchain Interaction**: ethers.js v6
+- **Privacy Service**: Relayer SDK (`createEncryptedInput`, `userDecrypt`)
 
-Zama FHEVM SDK: Keypair generation, EIP712 signing, and Relayer decryption.
+---
 
-🚀 Run Locally
-Prerequisites: Node.js (>= 18)
+## 🚀 Local Development Guide
 
-Install dependencies:
+### 1. Requirements
 
-bash
+- Node.js ≥ 18
+- npm or yarn
+- MetaMask (connected to local Hardhat network)
+
+### 2. Install Dependencies
+
+```bash
+# Clone repository
+git clone <your-repo-url>
+cd private-identity-dapp
+
+# Install frontend dependencies
 npm install
-Start the development server:
 
-bash
+# Install contract dependencies
+cd contract
+npm install
+```
+````
+
+### 3. Start FHEVM Local Node
+
+```bash
+cd contract
+npx hardhat node
+```
+
+Keep this terminal open and note the deployed contract address.
+
+### 4. Deploy Contracts
+
+```bash
+cd contract
+npx hardhat run deploy/deploy.ts --network localhost
+```
+
+### 5. Start Frontend
+
+```bash
+cd ..
 npm run dev
-Open your browser at:
+```
 
-Code
+Open browser at:
+
+```
 http://localhost:3000
-🌍 Deploy to Vercel
-Push your project to GitHub.
+```
 
-Log in to Vercel and click New Project.
+---
 
-Select your repository and confirm build settings:
+## 📖 Core Interaction Flow
 
-Next.js: npm run build
+### 1️⃣ Set Identity (Mint Identity)
 
-React: npm run build
+Frontend generates encrypted input and submits to contract:
 
-Click Deploy and get a public URL.
+```ts
+const input = fhevmInstance.createEncryptedInput(contractAddress, userAddress);
+input.add32(age).add32(credit).add32(tier);
+const { handles, inputProof } = await input.encrypt();
 
-📖 Usage Flow
-User calls setIdentity to submit encrypted age, credit score, and tier.
+await contract.setIdentity(handles[0], inputProof, ...);
+```
 
-Frontend calls checkIsAdult or checkIsVIP; contract returns an encrypted boolean.
+### 2️⃣ On-Chain Logic
 
-Frontend uses Relayer and userDecryptEbool to decrypt the result.
+```solidity
+function checkIsVIP() public returns (ebool) {
+    ebool isHighCredit = creditScore[msg.sender].gt(700);
+    ebool isGoldTier   = membershipTier[msg.sender].eq(1);
+    ebool isVIP        = isHighCredit | isGoldTier;
 
-The page displays whether access is GRANTED or DENIED.
+    FHE.allow(isVIP, msg.sender);
+    return isVIP;
+}
+```
 
-📝 Example Logs
-Frontend prints logs at key steps for debugging:
+### 3️⃣ Result Decryption (Relayer)
 
-Code
-AccessCheck: Starting check: checkIsAdult
-Encrypted handle: 0x8b7e445e...
-Decryption: Result: GRANTED
-AccessCheck: Finished check: checkIsAdult
-📌 Roadmap
-[ ] Add more identity attributes (e.g., income, education).
+```ts
+const encryptedResult = await contract.checkIsAdult.staticCall();
+const isAdult = await fhevmInstance.userDecrypt(
+  encryptedResult,
+  contractAddress,
+  userAddress,
+  signature // EIP-712 signature
+);
 
-[ ] Improve frontend UI/UX.
+console.log(isAdult ? "ACCESS GRANTED" : "ACCESS DENIED");
+```
 
-[ ] Support multi-user scenarios.
+---
 
-[ ] Deploy to mainnet with wallet integration.
+## 📁 Project Structure
+
+```
+├── src/
+│   ├── App.tsx              # Frontend entry
+│   ├── components/          # UI components
+│   ├── services/            # FHE service layer
+│   │   └── fheService.ts    # FHEVM initialization, encryption, decryption logic
+│   └── constants.ts         # Contract addresses and ABI config
+├── contract/
+│   ├── contracts/           # Solidity contracts
+│   │   └── PrivateIdentity.sol
+│   ├── deploy/              # Deployment scripts
+│   └── hardhat.config.ts    # Hardhat configuration
+└── README.md
+```
+
+---
+
+## 🚧 Roadmap
+
+- [x] Encrypted storage of basic identity attributes (Age, Credit, Tier)
+- [x] On-chain privacy checks (Adult, VIP)
+- [x] Frontend Relayer decryption integration
+- [ ] Support additional identity attributes (education, asset proofs)
+- [ ] Add "optional public decryption" (`makePubliclyDecryptable`)
+- [ ] Deploy to Zama Devnet/Testnet
+
+---
+
+## 📄 License
+
+MIT License
