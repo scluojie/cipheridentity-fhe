@@ -169,6 +169,7 @@ MIT License
 ---
 
 ## 📄 Showcase
+
 <img width="1947" height="1128" alt="image" src="https://github.com/user-attachments/assets/b060cc07-726d-4b70-9242-43a39f4285f8" />
 
 <img width="2240" height="1221" alt="image" src="https://github.com/user-attachments/assets/d1c2e8da-a9c7-44b0-a1aa-f6ace1c1b82c" />
@@ -176,7 +177,3 @@ MIT License
 <img width="1974" height="1110" alt="image" src="https://github.com/user-attachments/assets/abd0970f-b9cd-49bb-8f54-0a34d6ca3ec4" />
 
 <img width="1806" height="1002" alt="image" src="https://github.com/user-attachments/assets/5635a85e-61ff-462d-8e29-e1fb04890777" />
-
-
-
-
