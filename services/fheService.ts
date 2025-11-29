@@ -18,6 +18,17 @@ let contract: Contract | null = null;
 let signer: Signer | null = null;
 let signerAddress: string | null = null;
 
+// 实际 Zama Relayer 的公共 URL
+const RELAYER_PROD_URL = "https://relayer.testnet.zama.org";
+
+// 本地开发时使用的代理路径（对应 vite.config.ts 中的代理）
+// 也可以写成 "/relayer-api"，但写成完整的本地代理地址更明确
+const RELAYER_DEV_URL = "http://127.0.0.1:3000/relayer-api";
+
+// 判断是否是生产环境
+// 在 Vite/React 应用中，可以使用 import.meta.env.MODE 进行判断
+const isProduction = import.meta.env.MODE === "production";
+
 /**
  * 初始化 FHEVM 实例 (WASM)
  */
@@ -35,7 +46,7 @@ export async function initFhevm() {
     const config = {
       ...SepoliaConfig,
       network: window.ethereum,
-      relayerUrl: "http://127.0.0.1:3000/relayer-api",
+      relayerUrl: isProduction ? RELAYER_PROD_URL : RELAYER_DEV_URL,
     };
 
     console.log("FHE Config:", config);
